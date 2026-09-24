@@ -1,0 +1,38 @@
+services:
+  ib-gateway:
+    image: ib-gateway-fixed:latest
+    container_name: ib-gateway
+    restart: unless-stopped
+    environment:
+      - TRADING_MODE=${TRADING_MODE:-paper}
+      - TWS_USERID=${IBKR_USERID}
+      - TWS_PASSWORD=${IBKR_PASSWORD}
+      - READ_ONLY_API=${READ_ONLY_API:-no}
+      - TIME_ZONE=${TIME_ZONE:-Europe/Madrid}
+      - AUTO_RESTART_TIME=${AUTO_RESTART_TIME:-11:45 PM}
+      - RELOGIN_AFTER_TWOFA_TIMEOUT=${RELOGIN_AFTER_TWOFA_TIMEOUT:-yes}
+      - TWOFA_EXIT_INTERVAL=${TWOFA_EXIT_INTERVAL:-60}
+      - ACCEPT_MKT_DATA_DIALOG=yes
+      - ACCEPT_NON_BROKERAGE_ACCOUNT_WARNING=yes
+      - BYPASS_WARNING=yes
+      - TWS_ACCEPT_INCOMING=accept
+      - ALLOW_BLIND_TRADING=yes
+    ports:
+      - "4002:4004"
+    volumes:
+      - ib-gateway-data:/home/ibgateway:rw
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/4004' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    networks:
+      - ib-trading-app_default
+
+networks:
+  ib-trading-app_default:
+    external: true
+
+volumes:
+  ib-gateway-data:
