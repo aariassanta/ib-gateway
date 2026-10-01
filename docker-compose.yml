@@ -2,7 +2,7 @@ services:
   ib-gateway:
     image: ib-gateway-fixed:latest
     container_name: ib-gateway
-    restart: unless-stopped
+    restart: no
     environment:
       - TRADING_MODE=${TRADING_MODE:-paper}
       - TWS_USERID=${IBKR_USERID}
@@ -22,11 +22,18 @@ services:
     volumes:
       - ib-gateway-data:/home/ibgateway:rw
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/4004' || exit 1"]
+      # Probe TWS's own API port (4002), NOT 4004.
+      #
+      # 4004 is the socat listener from run_socat.sh; it accepts a connection
+      # even when TWS is dead, so the old check reported "healthy" while the
+      # gateway was completely down — and that is how a dead gateway stayed
+      # unnoticed through 510 failed logins. 4002 is the port TWS binds only
+      # after a successful login.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/4002' || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 120s
+      start_period: 300s
     networks:
       - ib-trading-app_default
 
